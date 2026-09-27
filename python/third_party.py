@@ -351,7 +351,9 @@ def build_package_type(name, source_dir, build_type, options, cache, components,
     fill_common_options(options, build_type, install_dir)
 
     if header_only:
-        # header-only: configure + install only, skip build
+        # header-only: configure + build + install；多数包 build 为空转，
+        # 但个别包（如 boost 带 atomic/serialization 等编译型子模块）的 install
+        # 规则依赖编译产物，干净环境下不 build 直接 install 会失败
         Path(build_dir).mkdir(parents=True, exist_ok=True)
 
         cmake_cmd = ["cmake", "-S", source_dir, "-B", build_dir, "-G", tool_chain[args.platform]]
@@ -365,6 +367,14 @@ def build_package_type(name, source_dir, build_type, options, cache, components,
 
         print(f"  [configure] {source_dir}")
         run_stream(cmake_cmd)
+
+        build_cmd = ["cmake", "--build", build_dir, "--config", build_type]
+        if args.jobs > 0:
+            build_cmd.extend(["--parallel", str(args.jobs)])
+        else:
+            build_cmd.append("--parallel")
+        print(f"  [build] {build_type}")
+        run_stream(build_cmd)
 
         install_cmd = ["cmake", "--install", build_dir, "--config", build_type]
         print(f"  [install] {build_type}")

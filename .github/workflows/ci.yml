@@ -42,11 +42,12 @@ jobs:
             exit 1
           fi
 
+      # 只查 CMake 与三方配置：python 构建脚本合法地探测系统路径（Program Files、VS 自带 Ninja）
       - name: No hardcoded absolute paths in build config
         run: |
-          if git grep -nE '([A-Za-z]:[\\/]|/Users/|/home/)' -- \
+          if git grep -nE '(^|[^A-Za-z0-9+.-])[A-Za-z]:[\\/]|/Users/|/home/' -- \
               'CMakeLists.txt' '*/CMakeLists.txt' '*/*/CMakeLists.txt' \
-              'cmake/*.cmake' 'cmake/*.json' 'python/*.py'; then
+              'cmake/*.cmake' 'cmake/*.json'; then
             echo "::error::build config must not contain local absolute paths"
             exit 1
           fi
@@ -62,7 +63,9 @@ jobs:
   # find_package(Vulkan) 只在 APPLE 分支触发。
   build-windows:
     name: Build & Test (windows)
-    runs-on: windows-latest
+    # 钉 windows-2022：third_party.py 与引擎配置均使用 VS2022 generator，
+    # windows-latest(2025+) 已不带 VS2022
+    runs-on: windows-2022
     timeout-minutes: 360
     env:
       THIRD_PARTY_DIR: ${{ github.workspace }}/3rd/Win32

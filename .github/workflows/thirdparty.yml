@@ -24,8 +24,8 @@ on:
 
 jobs:
   build-thirdparty:
-    # MacOS-arm 用 macos runner，其余（含定时任务无 inputs 时）走 windows
-    runs-on: ${{ inputs.platform == 'MacOS-arm' && 'macos-latest' || 'windows-latest' }}
+    # MacOS-arm 用 macos runner；Windows 钉 windows-2022（VS2022 generator，见 ci.yml）
+    runs-on: ${{ inputs.platform == 'MacOS-arm' && 'macos-latest' || 'windows-2022' }}
     timeout-minutes: 360
     env:
       PLATFORM: ${{ inputs.platform || 'Win32' }}

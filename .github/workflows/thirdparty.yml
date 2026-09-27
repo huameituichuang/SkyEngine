@@ -1,0 +1,81 @@
+# 手动/定期重建三方树，并写回 actions/cache 供 ci.yml 复用。
+# ci.yml 与 thirdparty.yml 的缓存 key 公式必须保持一致（按平台区分前缀）。
+#
+# 触发方式：手动（可选平台）+ 每周一次（默认 Win32）。
+# 日常 PR 不需要跑这个 workflow——只有 cmake/thirdparty.json 等输入变化导致
+# 缓存 key 失效时才需要，而 ci.yml 在 cache miss 时也会自行重建。
+
+name: Third-party
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: '目标平台'
+        type: choice
+        default: Win32
+        options: [ Win32, MacOS-arm ]
+      archive:
+        description: '是否打包 zip 并上传为 artifact'
+        type: boolean
+        default: true
+  schedule:
+    - cron: '0 18 * * 0'   # 每周日 18:00 UTC
+
+jobs:
+  build-thirdparty:
+    # MacOS-arm 用 macos runner，其余（含定时任务无 inputs 时）走 windows
+    runs-on: ${{ inputs.platform == 'MacOS-arm' && 'macos-latest' || 'windows-latest' }}
+    timeout-minutes: 360
+    env:
+      PLATFORM: ${{ inputs.platform || 'Win32' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install python deps
+        run: python -m pip install --quiet GitPython==3.1.44
+
+      # APPLE 平台 vulkan 后端需要 MoltenVK（与 ci.yml 的 build-macos 保持一致）
+      - name: Install Vulkan (MoltenVK)
+        if: env.PLATFORM == 'MacOS-arm'
+        run: brew install molten-vk vulkan-headers vulkan-loader
+
+      - name: Restore cache
+        id: tp
+        uses: actions/cache/restore@v4
+        with:
+          path: 3rd
+          key: 3rd-${{ env.PLATFORM == 'MacOS-arm' && 'macos-arm' || 'win-x64' }}-${{ hashFiles('cmake/thirdparty.json', 'python/third_party.py', 'python/build_*.py', 'cmake/patches/**') }}
+
+      # 单包重建可加 -t <pkg>（例如 -t slang）
+      - name: Build third-party
+        if: steps.tp.outputs.cache-hit != 'true'
+        run: python python/third_party.py -p ${{ env.PLATFORM }} -o 3rd -e . -j 0 -a thirdparty-${{ env.PLATFORM }}.zip
+
+      - name: Save cache
+        if: steps.tp.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: 3rd
+          key: 3rd-${{ env.PLATFORM == 'MacOS-arm' && 'macos-arm' || 'win-x64' }}-${{ hashFiles('cmake/thirdparty.json', 'python/third_party.py', 'python/build_*.py', 'cmake/patches/**') }}
+
+      - name: Upload archive
+        if: ${{ (inputs.archive || github.event_name == 'schedule') && steps.tp.outputs.cache-hit != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: thirdparty-${{ env.PLATFORM }}
+          path: thirdparty-*.zip
+          retention-days: 30
+
+      # 备选：作为滚动 Release 资产长期保存（Release 单资产上限 2 GiB，超限请用 -t 分包）
+      # - name: Publish to rolling release
+      #   if: steps.tp.outputs.cache-hit != 'true'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     gh release view thirdparty-cache || gh release create thirdparty-cache --title "third-party cache" --notes "rolling"
+      #     gh release upload thirdparty-cache thirdparty-*.zip --clobber

@@ -47,6 +47,9 @@ namespace sky::aurora::test {
             desc.enableDebugLayer = true;
             desc.api              = API::VULKAN;
             Instance::Get()->Init(desc);
+            if (Instance::Get()->GetDevice() == nullptr) {
+                GTEST_SKIP() << "vulkan backend unavailable (no GPU or driver)";
+            }
         }
 
         static void TearDownTestSuite()
@@ -68,6 +71,9 @@ namespace sky::aurora::test {
             desc.enableDebugLayer = true;
             desc.api              = API::DX12;
             Instance::Get()->Init(desc);
+            if (Instance::Get()->GetDevice() == nullptr) {
+                GTEST_SKIP() << "d3d12 backend unavailable (no GPU or driver)";
+            }
         }
 
         static void TearDownTestSuite()
@@ -90,6 +96,9 @@ namespace sky::aurora::test {
             desc.enableDebugLayer = true;
             desc.api              = API::METAL;
             Instance::Get()->Init(desc);
+            if (Instance::Get()->GetDevice() == nullptr) {
+                GTEST_SKIP() << "metal backend unavailable (no GPU or driver)";
+            }
         }
 
         static void TearDownTestSuite()

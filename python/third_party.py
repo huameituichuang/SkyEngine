@@ -39,6 +39,12 @@ if not args.engine:
 # 规范化为绝对路径：patch/custom/json 等路径会传给在包仓库目录下执行的
 # git apply 等命令，相对路径（如 -e .）会导致找不到文件
 args.engine = os.path.abspath(args.engine)
+# output/intermediate 会写进 cmake 选项（3RD_PATH 等），在包仓库的构建目录内
+# 解析（如 metis 依赖 GKlib），同样必须绝对化
+if args.output:
+    args.output = os.path.abspath(args.output)
+if args.intermediate:
+    args.intermediate = os.path.abspath(args.intermediate)
 
 tool_chain = {
     'Win32': 'Visual Studio 17 2022',

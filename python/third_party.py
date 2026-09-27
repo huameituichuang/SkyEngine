@@ -30,6 +30,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 if not args.engine:
     args.engine = str(REPO_ROOT)
+# 规范化为绝对路径：patch/custom/json 等路径会传给在包仓库目录下执行的
+# git apply 等命令，相对路径（如 -e .）会导致找不到文件
+args.engine = os.path.abspath(args.engine)
 
 tool_chain = {
     'Win32': 'Visual Studio 17 2022',

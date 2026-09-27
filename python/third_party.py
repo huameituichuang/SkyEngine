@@ -13,6 +13,12 @@ from git import GitCommandError
 from pathlib import Path
 from git import Repo
 
+# 非中文区域的 Windows 控制台（如 cp1252 的 CI runner）无法编码中文输出，
+# 统一 stdout/stderr 为 UTF-8，避免 print 中文时 UnicodeEncodeError
+for _stream in (sys.stdout, sys.stderr):
+    if _stream.encoding and _stream.encoding.lower() != 'utf-8':
+        _stream.reconfigure(encoding='utf-8', errors='replace')
+
 parser = argparse.ArgumentParser(description='SkyEngine 三方库编译工具')
 parser.add_argument('-i', '--intermediate', type=str, help='中间文件')
 parser.add_argument('-o', '--output', type=str, help='输出路径')

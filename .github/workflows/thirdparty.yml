@@ -22,6 +22,9 @@ on:
   schedule:
     - cron: '0 18 * * 0'   # 每周日 18:00 UTC
 
+env:
+  PYTHONUTF8: '1'   # 见 ci.yml：防止 cp1252 控制台下 python 中文输出崩溃
+
 jobs:
   build-thirdparty:
     # MacOS-arm 用 macos runner；Windows 钉 windows-2022（VS2022 generator，见 ci.yml）

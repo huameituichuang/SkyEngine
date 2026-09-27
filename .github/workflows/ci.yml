@@ -13,6 +13,7 @@ concurrency:
 
 env:
   BUILD_TYPE: Release
+  PYTHONUTF8: '1'   # runner 控制台为 cp1252，防止 python 子进程中文输出崩溃
 
 jobs:
   # ---------------------------------------------------------------- 规则门禁（快）

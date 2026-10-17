@@ -5,6 +5,7 @@
 #include <render/adaptor/components/PrefabComponent.h>
 #include <render/adaptor/Util.h>
 #include <render/mesh/MeshFeatureProcessor.h>
+#include <functional>
 
 namespace sky {
 
@@ -41,6 +42,32 @@ namespace sky {
         data.visibleIDs[nodeId] = visibleID;
     }
 
+    void PrefabComponent::ComputeNodeWorldTransforms()
+    {
+        const auto &nodes = prefab.Data().nodes;
+        size_t nodeNum = nodes.size();
+        nodeWorldTransforms.resize(nodeNum);
+        std::vector<uint8_t> resolved(nodeNum, 0);
+
+        std::function<const Transform&(uint32_t)> solve = [&](uint32_t index) -> const Transform& {
+            if (resolved[index] == 0u) {
+                const auto &node = nodes[index];
+                uint32_t parent = node.parentIndex;
+                if (parent != ~(0u) && parent < nodeNum && parent != index) {
+                    nodeWorldTransforms[index] = solve(parent) * node.localTransform;
+                } else {
+                    nodeWorldTransforms[index] = node.localTransform;
+                }
+                resolved[index] = 1;
+            }
+            return nodeWorldTransforms[index];
+        };
+
+        for (uint32_t i = 0; i < nodeNum; ++i) {
+            solve(i);
+        }
+    }
+
     void PrefabComponent::OnTransformChanged(const Transform& global, const Transform& local)
     {
         cacheTransform = global;
@@ -48,7 +75,7 @@ namespace sky {
         auto size = renderers.size();
         for (int i = 0; i < size; i++) {
             auto* renderer = renderers[i];
-            const auto& trans = prefab.Data().nodes[i].localTransform;
+            const auto& trans = GetNodeWorldTransform(i);
 
             if (renderer != nullptr) {
                 Transform meshTrans = cacheTransform * trans;
@@ -118,6 +145,7 @@ namespace sky {
         if (type == AssetTraits<RenderPrefab>::ASSET_TYPE) {
             const auto &prefabData = prefab.Data();
             size_t nodeNum = prefabData.nodes.size();
+            ComputeNodeWorldTransforms();
             capacity.store(nodeNum);
             proyNodes.resize(nodeNum);
             data.visibleIDs.resize(nodeNum, ~(0U));
@@ -155,7 +183,7 @@ namespace sky {
                     auto& buildTask = buildTasks.back();
                     buildTask.lodGroup = lodGroup.group;
                     buildTask.nodeId = nodeId;
-                    buildTask.localTransform = prefab.Data().nodes[nodeId].localTransform;
+                    buildTask.localTransform = GetNodeWorldTransform(nodeId);
 
                     proyNodes[nodeId].lodGroup = lodGroup.group;
                 }

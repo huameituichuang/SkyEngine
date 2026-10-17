@@ -16,6 +16,7 @@
 #include <framework/serialization/SerializationContext.h>
 #include <render/adaptor/assets/MaterialAsset.h>
 #include <render/adaptor/assets/MeshAsset.h>
+#include <render/adaptor/assets/LodGroupAsset.h>
 #include <render/adaptor/assets/AnimationAsset.h>
 
 #include <animation/core/Skeleton.h>
@@ -416,6 +417,12 @@ namespace sky::builder {
             indices[3 * i + 1] = face.mIndices[1];
             indices[3 * i + 2] = face.mIndices[2];
         }
+        if (meshData.subMeshes.empty()) {
+            meshData.aabb = subMesh.aabb;
+        } else {
+            meshData.aabb.min = Min(meshData.aabb.min, subMesh.aabb.min);
+            meshData.aabb.max = Max(meshData.aabb.max, subMesh.aabb.max);
+        }
         meshData.subMeshes.emplace_back(subMesh);
     }
 
@@ -514,7 +521,34 @@ namespace sky::builder {
 
         auto source = AssetDataBase::Get()->RegisterAsset(sourcePath);
         context.meshes.emplace_back(source);
-        return source->uuid;
+
+        // 运行时按 LodGroup 加载（PrefabComponent → SingleAssetHolder<LodGroup>），
+        // 为每个 mesh 生成一个单级 LOD 的配套 .lodgroup 资产
+        std::string lodName = meshName;
+        auto dotPos = lodName.find_last_of('.');
+        if (dotPos != std::string::npos) {
+            lodName = lodName.substr(0, dotPos);
+        }
+        lodName += ".lodgroup";
+
+        LodGroupData lodData = {};
+        lodData.type = "mesh";
+        LodGroupLevelData level = {};
+        level.screenSize = 0.f;
+        level.resId = source->uuid;
+        lodData.levels.emplace_back(level);
+
+        AssetSourcePath lodPath = {};
+        lodPath.bundle = SourceAssetBundle::WORKSPACE;
+        lodPath.path = context.path.path / FilePath(lodName);
+        {
+            auto file = AssetDataBase::Get()->CreateOrOpenFile(lodPath);
+            auto archive = file->WriteAsArchive();
+            JsonOutputArchive json(*archive);
+            lodData.SaveJson(json);
+        }
+        auto lodSource = AssetDataBase::Get()->RegisterAsset(lodPath);
+        return lodSource->uuid;
     }
 
     static void ProcessNode(aiNode *node, const aiScene *scene, uint32_t parent, PrefabBuildContext& context, const AssetImportRequest &request) // NOLINT

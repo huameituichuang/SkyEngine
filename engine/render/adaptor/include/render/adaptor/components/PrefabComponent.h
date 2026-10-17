@@ -41,6 +41,14 @@ namespace sky {
         void SetVisibleID(uint32_t nodeId, VisibleID visibleID);
         const Transform& GetCachedTransform() const { return cacheTransform; }
 
+        const Transform& GetNodeWorldTransform(uint32_t nodeId) const
+        {
+            if (nodeId < nodeWorldTransforms.size()) {
+                return nodeWorldTransforms[nodeId];
+            }
+            return prefab.GetAsset()->Data().nodes[nodeId].localTransform;
+        }
+
         const RenderPrefabAssetData& GetAssetData() const { return prefab.GetAsset()->Data(); }
     private:
         void Tick(float time) override;
@@ -53,10 +61,13 @@ namespace sky {
         void OnSerialized() override;
         void OnAssetLoaded(const Uuid& uuid, const std::string_view& type) override;
 
+        void ComputeNodeWorldTransforms();
+
         void Gather(std::vector<IStaticRenderObject*> &outObjects) override;
 
         // logic threads
         std::vector<MeshRenderer*> renderers;
+        std::vector<Transform> nodeWorldTransforms;
         EventBinder<ITransformEvent> transformEvent;
         EventBinder<IStaticRenderObjectGather> gatherEvent;
         SingleAssetHolder<RenderPrefab> prefab;
@@ -93,18 +104,14 @@ namespace sky {
         void SetObjectID(VisibleID id) override { owner->SetVisibleID(nodeId, id); }
         BoundingBoxSphere GetWorldBounds() const override
         {
-            const auto& prefabData = owner->GetAssetData();
-            const auto& trans = prefabData.nodes[nodeId].localTransform;
-            Transform meshTrans = owner->GetCachedTransform() * trans;
+            Transform meshTrans = owner->GetCachedTransform() * owner->GetNodeWorldTransform(nodeId);
             auto localBounds = lodGroup->GetBoundingBox();
             return BoundingBoxSphere::Transform(localBounds, meshTrans.ToMatrix());
         }
 
         Matrix4 GetWorldTransform() const override
         {
-            const auto& prefabData = owner->GetAssetData();
-            const auto& trans = prefabData.nodes[nodeId].localTransform;
-            Transform meshTrans = owner->GetCachedTransform() * trans;
+            Transform meshTrans = owner->GetCachedTransform() * owner->GetNodeWorldTransform(nodeId);
             return meshTrans.ToMatrix();
         }
 

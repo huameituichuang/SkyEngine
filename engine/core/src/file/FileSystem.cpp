@@ -224,6 +224,9 @@ namespace sky {
         auto fromPath = from.filePath.is_absolute() ? from.filePath : (fsRoot / from).filePath;
         auto toPath = to.filePath.is_absolute() ? to.filePath : (fsRoot / to).filePath;
 
+        // 目标父目录可能不存在（如导入带子目录引用的纹理 textures/xxx.png），先创建
+        std::error_code ec;
+        std::filesystem::create_directories(toPath.parent_path(), ec);
         std::filesystem::copy(fromPath, toPath, std::filesystem::copy_options::overwrite_existing);
     }
 

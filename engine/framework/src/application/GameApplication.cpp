@@ -13,6 +13,7 @@
 
 #include <framework/asset/AssetManager.h>
 #include <framework/asset/AssetDataBase.h>
+#include <framework/asset/AssetProductBundle.h>
 #include <framework/platform/PlatformBase.h>
 
 static const char *TAG = "Application";
@@ -32,14 +33,22 @@ namespace sky {
 
         options.add_options()("p,project", "Project Directory", cxxopts::value<std::string>());
         auto result = options.parse(argc, argv);
+        FilePath workRoot;
         if (result.count("project") != 0u) {
-            std::string projectPath = result["project"].as<std::string>();
-            workFs = new NativeFileSystem(projectPath);
-            AssetManager::Get()->SetWorkFileSystem(workFs);
+            workRoot = FilePath(result["project"].as<std::string>());
         } else {
-            std::string workPath = Platform::Get()->GetBundlePath();
-            workFs = new NativeFileSystem(workPath);
-            AssetManager::Get()->SetWorkFileSystem(workFs);
+            workRoot = FilePath(Platform::Get()->GetBundlePath());
+        }
+        workFs = new NativeFileSystem(workRoot);
+        AssetManager::Get()->SetWorkFileSystem(workFs);
+        AssetDataBase::Get()->SetWorkSpaceFs(workFs);
+        AssetDataBase::Get()->Load();
+
+        // 注册 cooked 资产 bundle（工具链产出在 <workspace>/products/common）
+        {
+            std::string bundleKey = "common";
+            auto bundleFs = new NativeFileSystem(workRoot / FilePath("products") / FilePath(bundleKey));
+            AssetManager::Get()->AddAssetProductBundle(new HashedAssetBundle(bundleFs, bundleKey));
         }
 #elif __ANDROID__
         workFs = new NativeFileSystem(Platform::Get()->GetInternalPath());//Platform::Get()->GetBundleFileSystem();
@@ -53,10 +62,10 @@ namespace sky {
         AssetManager::Get()->AddAssetProductBundle(new HashedAssetBundle(bundleFs, bundleKey));
 
 #else
-        AssetManager::Get()->SetWorkPath(Platform::Get()->GetInternalPath());
-        auto fs = std::make_shared<NativeFileSystem>();
-        fs->AddPath(Platform::Get()->GetInternalPath());
-        workFs = fs;
+        workFs = new NativeFileSystem(Platform::Get()->GetBundlePath());
+        AssetManager::Get()->SetWorkFileSystem(workFs);
+        AssetDataBase::Get()->SetWorkSpaceFs(workFs);
+        AssetDataBase::Get()->Load();
 #endif
         if (!Application::Init(argc, argv)) {
             return false;

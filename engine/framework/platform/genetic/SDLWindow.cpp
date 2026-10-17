@@ -7,7 +7,26 @@
 #include <framework/window/NativeWindow.h>
 #include <framework/window/NativeWindowManager.h>
 
+#ifdef __APPLE__
+#include <ApplicationServices/ApplicationServices.h>
+#include <objc/runtime.h>
+#include <objc/message.h>
+#endif
+
 namespace sky {
+
+#ifdef __APPLE__
+    static void MakeProcessForegroundApp()
+    {
+        // 终端启动的进程默认 activation policy 是 accessory，收不到键盘焦点。
+        // 转成 regular app 并激活。用 objc runtime 以便在 .cpp 里调用。
+        id app = ((id(*)(Class, SEL))objc_msgSend)(objc_getClass("NSApplication"), sel_getUid("sharedApplication"));
+        if (app != nil) {
+            ((void(*)(id, SEL, long))objc_msgSend)(app, sel_getUid("setActivationPolicy:"), 0 /* NSApplicationActivationPolicyRegular */);
+            ((void(*)(id, SEL, BOOL))objc_msgSend)(app, sel_getUid("activateIgnoringOtherApps:"), YES);
+        }
+    }
+#endif
 
     SDLWindow::~SDLWindow()
     {
@@ -24,6 +43,10 @@ namespace sky {
         if (window != nullptr) {
             winID = SDL_GetWindowID(window);
             NativeWindowManager::Get()->Register(this);
+#ifdef __APPLE__
+            MakeProcessForegroundApp();
+            SDL_RaiseWindow(window);
+#endif
         }
         return window != nullptr;
     }

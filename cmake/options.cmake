@@ -1,5 +1,13 @@
 SET(3RD_PATH "" CACHE STRING "SkyEngine 3rd path")
 
+# Apple 平台下模块系统依赖跨进程边界的单例共享（ModuleManager dlopen 模块后，模块与宿主必须看到同一份
+# Core/Framework 单例），静态库会让每个 dylib/exe 各持一份副本导致状态分裂。Apple 上使用 SHARED。
+if (APPLE)
+    set(SKY_BASE_LIB_TYPE SHARED)
+else ()
+    set(SKY_BASE_LIB_TYPE STATIC)
+endif ()
+
 option(SKY_BUILD_EDITOR "build editor" OFF)
 option(SKY_EDITOR "editor mode" OFF)
 

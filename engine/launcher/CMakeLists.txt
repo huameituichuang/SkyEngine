@@ -14,6 +14,7 @@ if (NOT ANDROID)
             ${COMMON_SRC}
         INCS
             common
+            ${3RD_PATH}/stb/include
         LIBS
             Framework
             RenderAdaptor

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <cmath>
 #include <core/platform/Platform.h>
 #include <core/platform/Simd.h>

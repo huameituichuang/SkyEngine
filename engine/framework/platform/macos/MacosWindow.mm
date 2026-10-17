@@ -4,6 +4,7 @@
 
 #include "MacosWindow.h"
 #include <SDL2/SDL_syswm.h>
+#import <Cocoa/Cocoa.h>
 
 namespace sky {
 
@@ -22,7 +23,10 @@ namespace sky {
         SDL_SysWMinfo wmInfo;
         SDL_VERSION(&wmInfo.version);
         SDL_GetWindowWMInfo(window, &wmInfo);
-        winHandle = reinterpret_cast<void *>(wmInfo.info.cocoa.window);
+        // RHI 后端（vulkan/SwapchainImpl.mm）期望拿到 NSView*（会做 setLayer CAMetalLayer），
+        // cocoa.window 是 NSWindow*，这里取它的 contentView。
+        NSWindow *nsWindow = wmInfo.info.cocoa.window;
+        winHandle = [nsWindow contentView];
     }
 
     NativeWindow *NativeWindow::Create(const Descriptor &des)

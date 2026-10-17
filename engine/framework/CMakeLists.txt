@@ -27,7 +27,7 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
         game-activity::game-activity)
 endif ()
 
-sky_add_library(TARGET Framework STATIC
+sky_add_library(TARGET Framework ${SKY_BASE_LIB_TYPE}
     SOURCES
         ${PLATFORM_SRC}
         ${APP_SRC}

@@ -14,7 +14,12 @@ namespace sky {
 
     class AnimationClip : public RefObject {
     public:
-        explicit AnimationClip(const Name &inName, const Uuid& inUuid) : name(inName), sourceId(inUuid) {} // NOLINT
+        explicit AnimationClip(const Name &inName) : name(inName) {} // NOLINT
+        explicit AnimationClip(const Name &inName, const Uuid& inUuid) : name(inName)
+#if SKY_EDITOR
+            , sourceId(inUuid)
+#endif
+        {} // NOLINT
         ~AnimationClip() override = default;
 
         void AddChannel(const AnimChannelPtr &channel);

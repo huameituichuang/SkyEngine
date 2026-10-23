@@ -20,6 +20,8 @@ namespace sky {
         std::pair<Transform, bool> Resolve(float time, const Transform &trans);
 
         void SetMoveSpeed(float speed);
+        float GetMoveSpeed() const { return moveSpeed; }
+        void SetKeyState(ScanCode code, bool down) { keyButtons[code] = down; }
 
     private:
         void OnMouseButtonDown(const MouseButtonEvent &event) override;

@@ -7,7 +7,9 @@ if (WIN32)
     add_subdirectory(dx12)
 endif()
 
-if (APPLE)
+option(SKY_BUILD_METAL "build metal rhi backend" ON)
+
+if (APPLE AND SKY_BUILD_METAL)
     add_subdirectory(metal)
 endif()
 

@@ -10,6 +10,8 @@
 #include <core/file/FileIO.h>
 
 #include <framework/asset/AssetManager.h>
+#include <framework/asset/AssetDataBase.h>
+#include <framework/asset/AssetBuilderManager.h>
 static const char *TAG = "Application";
 static const char *CONFIG_PATH = "/config/modules_tool.json";
 
@@ -22,6 +24,8 @@ namespace sky {
 
         options.add_options()
             ("p,project", "Project Directory", cxxopts::value<std::string>())
+            ("e,engine", "Engine Directory", cxxopts::value<std::string>())
+            ("i,intermediate", "Project Intermediate Directory", cxxopts::value<std::string>())
             ("m,module", "Addition Module", cxxopts::value<std::vector<std::string>>())
             ("h,help", "Print usage");
 
@@ -41,7 +45,27 @@ namespace sky {
             }
         }
 
-        AssetManager::Get()->SetWorkFileSystem(new NativeFileSystem(projectPath));
+        // 对齐 EditorApplication 的 FS 初始化：builder 模块依赖 AssetBuilderManager/AssetDataBase 的完整工作区
+        std::string enginePath = projectPath;
+        if (result.count("engine") != 0u) {
+            enginePath = result["engine"].as<std::string>();
+        }
+        FilePath intermediatePath = FilePath(projectPath) / FilePath("Intermediate");
+        if (result.count("intermediate") != 0u) {
+            intermediatePath = FilePath(result["intermediate"].as<std::string>());
+        }
+
+        FileSystemPtr       workFs   = new NativeFileSystem(projectPath);
+        NativeFileSystemPtr engineFs = new NativeFileSystem(enginePath);
+        NativeFileSystemPtr interFs  = new NativeFileSystem(intermediatePath);
+
+        AssetManager::Get()->SetWorkFileSystem(workFs);
+        AssetDataBase::Get()->SetEngineFs(engineFs);
+        AssetDataBase::Get()->SetWorkSpaceFs(workFs);
+
+        AssetBuilderManager::Get()->SetEngineFs(engineFs);
+        AssetBuilderManager::Get()->SetWorkSpaceFs(workFs);
+        AssetBuilderManager::Get()->SetInterMediateFs(interFs);
     }
 
     void ToolApplicationBase::LoadConfigs()

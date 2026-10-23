@@ -38,6 +38,7 @@ namespace sky {
     private:
         void ShutDown();
         void OnTransformChanged(const Transform& global, const Transform& local) override;
+        void UpdateProjection();
 
         // data
         float near   = 0.1f;
@@ -51,6 +52,7 @@ namespace sky {
 
         // status
         SceneView *sceneView = nullptr;
+        EventBinder<ITransformEvent> transformEvent;
     };
 
 } // namespace sky

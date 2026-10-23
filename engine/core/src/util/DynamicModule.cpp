@@ -4,6 +4,9 @@
 
 #include <core/util/DynamicModule.h>
 #include <vector>
+#ifdef __APPLE__
+    #include <mach-o/dyld.h>
+#endif
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -37,6 +40,22 @@ namespace sky {
         std::string libName = DYN_PREFIX + name + DYN_SUFFIX;
 #ifdef _WIN32
         handle = ::LoadLibraryExA(libName.c_str(), nullptr, 0);
+#elif __APPLE__
+        handle = dlopen(libName.c_str(), RTLD_LOCAL | RTLD_LAZY);
+        if (handle == nullptr) {
+            // dlopen 不会按可执行文件目录搜索裸文件名（Windows LoadLibrary 会），
+            // 这里补上与 Windows 对齐的行为：尝试 <可执行文件目录>/<libName>
+            char exePath[1024];
+            uint32_t size = sizeof(exePath);
+            if (_NSGetExecutablePath(exePath, &size) == 0) {
+                std::string fullPath = exePath;
+                auto pos = fullPath.find_last_of('/');
+                if (pos != std::string::npos) {
+                    fullPath = fullPath.substr(0, pos + 1) + libName;
+                    handle = dlopen(fullPath.c_str(), RTLD_LOCAL | RTLD_LAZY);
+                }
+            }
+        }
 #else
         handle = dlopen(libName.c_str(), RTLD_LOCAL | RTLD_LAZY);
 #endif

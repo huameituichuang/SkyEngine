@@ -22,7 +22,7 @@ if (SKY_USE_TRACY)
     list(APPEND CORE_OPT_LIBS   3rdParty::tracy)
 endif ()
 
-sky_add_library(TARGET Core STATIC
+sky_add_library(TARGET Core ${SKY_BASE_LIB_TYPE}
     SOURCES
         ${SRC_FILES}
         ${INC_FILES}

@@ -111,8 +111,9 @@ namespace sky {
             return;
         }
 
-        moveSpeed += static_cast<float>(event.y);
-        moveSpeed = std::clamp(moveSpeed, 0.1f, 10000.f);
+        // 倍率调速：触控板连续滚动不会让速度爆炸
+        float factor = event.y > 0 ? 1.1f : (1.f / 1.1f);
+        moveSpeed = std::clamp(moveSpeed * factor, 0.5f, 60.f);
     }
 
     void FirstPersonController::OnKeyUp(const KeyboardEvent &event)

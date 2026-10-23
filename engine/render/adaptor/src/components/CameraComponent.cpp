@@ -37,12 +37,14 @@ namespace sky {
         far    = far_;
         fov    = fov_;
         type   = ProjectType::PROJECTIVE;
+        UpdateProjection();
     }
 
     void CameraComponent::Otho(float h)
     {
         othoH = h;
-        type   = ProjectType::ORTHOGONAL;
+        type  = ProjectType::ORTHOGONAL;
+        UpdateProjection();
     }
 
     void CameraComponent::SetAspect(uint32_t width_, uint32_t height_)
@@ -50,6 +52,7 @@ namespace sky {
         width = width_;
         height = height_;
         aspect = static_cast<float>(width) / static_cast<float>(height);
+        UpdateProjection();
     }
 
     const Matrix4 &CameraComponent::GetProject() const
@@ -64,6 +67,8 @@ namespace sky {
 
     void CameraComponent::OnAttachToWorld()
     {
+        transformEvent.Bind(this, actor);
+
         auto *scene = GetRenderSceneFromActor(actor);
         sceneView = scene->CreateSceneView(1);
 
@@ -118,9 +123,17 @@ namespace sky {
     {
         auto world = global.ToMatrix();
         sceneView->SetMatrix(world);
+        UpdateProjection();
+    }
 
+    void CameraComponent::UpdateProjection()
+    {
+        if (sceneView == nullptr) {
+            return;
+        }
         if (type == ProjectType::PROJECTIVE) {
-            sceneView->SetPerspective(near, far, fov / 180.f * 3.14f, aspect);
+            // fov 存储为角度制，MakePerspective 需要弧度
+            sceneView->SetPerspective(near, far, fov / 180.f * 3.1415926f, aspect);
         } else {
             const float x = othoH;
             const float y = othoH;

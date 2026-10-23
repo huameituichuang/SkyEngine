@@ -28,5 +28,13 @@ namespace sky::mtl {
         });
     }
 
+    rhi::TransferTaskHandle Queue::ReadImage(const rhi::ImagePtr &image, rhi::ReadCallBack &&callback)
+    {
+        // TODO: 实现 Metal 读回（blit 到 shared buffer 后回调），目前仅占位
+        return CreateTask([callback = std::move(callback)]() {
+            callback(nullptr, 0, 0);
+        });
+    }
+
 } // namespace sky::mtl
 
